@@ -89,8 +89,13 @@ const Piano = ({ synthRef, chordMappings, setChordMappings, currentGesture}: Pia
                 <div data-note="G" onClick={handleKeyPress("G4")} className={getKeyClass("G4", false)}></div>
                 <div data-note="G#" onClick={handleKeyPress("G#4")} className={getKeyClass("G#4", true) + " ml-52"}></div>
                 <div data-note="A" onClick={handleKeyPress("A4")} className={getKeyClass("A4", false)}></div>
-                <div data-note="Bb" onClick={handleKeyPress("Bb4")} className={getKeyClass("Bb4", true) + " ml-62"}></div>
+                <div data-note="Bb" onClick={handleKeyPress("Bb4")} className={getKeyClass("Bb4", true) + " ml-64"}></div>
                 <div data-note="B" onClick={handleKeyPress("B4")} className={getKeyClass("B4", false)}></div>
+                <div data-note="C5" onClick={handleKeyPress("C5")} className={getKeyClass("C5", false)}></div>
+                <div data-note="Db5" onClick={handleKeyPress("Db5")} className={getKeyClass("Db5", true) + " ml-84"}></div>
+                <div data-note="D5" onClick={handleKeyPress("D5")} className={getKeyClass("D5", false)}></div>
+                <div data-note="Eb5" onClick={handleKeyPress("Eb5")} className={getKeyClass("Eb5", true) + " ml-95"}></div>
+                <div data-note="E5" onClick={handleKeyPress("E5")} className={getKeyClass("E5", false)}></div>
             </div>
             <div className='space-x-5'>
                 <Button className='mt-10 bg-orange-400 text-white' onClick={clearSelection}>Clear Selection</Button>

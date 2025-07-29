@@ -8,7 +8,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { Calendar, Home, Inbox, Search, Settings } from "lucide-react"
+import { Home, MessageCircleQuestion} from "lucide-react"
 import MidiSelect from "./ui/iosettings"
    
   // Menu items.
@@ -20,24 +20,9 @@ import MidiSelect from "./ui/iosettings"
         },
         {
         title: "About",
-        url: "/pages/about",
-        icon: Inbox,
-        },
-        {
-        title: "Calendar",
-        url: "#",
-        icon: Calendar,
-        },
-        {
-        title: "Search",
-        url: "#",
-        icon: Search,
-        },
-        {
-        title: "Settings",
-        url: "#",
-        icon: Settings,
-        },
+        url: "/about",
+        icon: MessageCircleQuestion,
+        }
     ]
     
     export function AppSidebar() {
@@ -45,9 +30,13 @@ import MidiSelect from "./ui/iosettings"
         <Sidebar collapsible="icon">
             <SidebarContent>
                 <SidebarGroup>
-                    <SidebarGroupLabel>WaveForm</SidebarGroupLabel>
+                    <SidebarGroupLabel>
+                        <div className="gap-4">
+                            <img src={"../../public/logo.png"} alt="WaveForm Logo" width={200} height={200} className="p-10 mt-4"></img>
+                        </div>
+                    </SidebarGroupLabel>
                     <SidebarGroupContent>
-                        <SidebarMenu>
+                        <SidebarMenu className="mt-10">
                             {items.map((item) => (
                             <SidebarMenuItem key={item.title}>
                                 <SidebarMenuButton asChild>

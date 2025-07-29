@@ -37,13 +37,6 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
-/* Optionally remove or comment out the .dark block if it's no longer needed */
-/*
-.dark {
-  ... dark mode variables ...
-}
-*/
-
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

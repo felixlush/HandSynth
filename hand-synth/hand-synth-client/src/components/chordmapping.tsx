@@ -13,17 +13,16 @@ interface ChordMappingProps {
 }
 
 const initalMappings = [
-    {gesture: "fist", chord: ["C4", "E4", "G4"]},
     {gesture: "palm", chord: ["D4", "F4", "A4"]},
     {gesture: "peace", chord: ["E4", "G4", "B4"]},
     {gesture: "point", chord: ["F4", "A4", "C4"]},
-    {gesture: "thumbs-up", chord: ["G4", "B4", "D4"]}
+    {gesture: "three-fingers", chord: ["G4", "B4", "D4"]}
 ]
 
 
 const ChordMapping = ({synthRef, setChordMappings, chordMappings}: ChordMappingProps) => {
 
-    const [selectedGesture, setSelectedGesture] = useState<string>("fist")
+    const [selectedGesture, setSelectedGesture] = useState<string>("palm")
 
     return (
         <div>

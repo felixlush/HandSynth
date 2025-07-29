@@ -4,11 +4,10 @@ import { Select, SelectItem, SelectValue } from './select'
 import { SelectContent, SelectIcon, SelectTrigger } from '@radix-ui/react-select'
 
 const gestures = [
-    {value: "fist", label: "fist", path: "/fist-gesture.png"},
     {value: "palm", label: "palm", path: "/palm-gesture.png"},
     {value: "peace", label: "peace", path: "/peace-gesture.png"},
     {value: "point", label: "point", path: "/point-gesture.png"},
-    {value: "thumbs-up", label: "thumbs-up", path: "/thumbs-up-gesture.png"},
+    {value: "three-fingers", label: "three-fingers", path: "/three-finger.svg"},
 ]
 
 interface GestureSelectProps {
@@ -20,7 +19,7 @@ const GestureSelect = ({onGestureChange, selectedGesture}: GestureSelectProps) =
 
     return (
         <div>
-            <Card className='w=1/2 border-accent-foreground'>
+            <Card className='border-accent-foreground overflow-auto'>
 
                 <CardHeader>
                     <CardTitle>Gesture</CardTitle>
@@ -31,9 +30,13 @@ const GestureSelect = ({onGestureChange, selectedGesture}: GestureSelectProps) =
                         <SelectTrigger>
                             <SelectValue placeholder="Select A Gesture"/>
                         </SelectTrigger>
-                        <SelectContent className='overflow-scroll'>
+                        <SelectContent 
+                            position="popper"     // enable flip/offset logic
+                            sideOffset={5}        // a little gap from the trigger
+                            className="overflow-hidden rounded-md bg-blue-600 opacity-80 shadow-md"
+                        >
                             {gestures.map((gesture) => (
-                                <SelectItem key={gesture.value} value={gesture.value} className='flex items-center gap-2'>
+                                <SelectItem key={gesture.value} value={gesture.value} className='flex items-center gap-2 p-2'>
                                     <img 
                                         src={gesture.path}
                                         alt={gesture.label}

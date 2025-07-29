@@ -1,40 +1,85 @@
+import base64
+import os
+import time
+from typing import Optional
 from flask import Flask, jsonify
 from flask_socketio import SocketIO
 import cv2
-import mediapipe as mp
+import torch
+from torchvision import transforms
+from model.utils import MobileNetV3LargeUNet, heatmaps_to_coordinates
+from model.globals import DATASET_MEANS, DATASET_STDS, MODEL_IMG_SIZE, N_KEYPOINTS
 import numpy as np
+from PIL import Image
+import mediapipe as mp
+
+SAVE_DIR = "sample_imgs/"
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+if torch.cuda.is_available():
+    device="cuda"
+else:
+    device="cpu"
+
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(max_num_hands=2)
-mp_draw = mp.solutions.drawing_utils
+hand_detector = mp_hands.Hands(
+    static_image_mode=True,
+    max_num_hands=1,
+    min_detection_confidence=0.5
+)
 
-def detect_left_hand_gesture(hand_landmarks):
-    index_extended = hand_landmarks.landmark[8].y < hand_landmarks.landmark[6].y
-    middle_extended = hand_landmarks.landmark[12].y < hand_landmarks.landmark[10].y
-    ring_extended = hand_landmarks.landmark[16].y < hand_landmarks.landmark[14].y
-    pinky_extended = hand_landmarks.landmark[20].y < hand_landmarks.landmark[18].y
+#Create and load model
+model = MobileNetV3LargeUNet(21).to(device)
+# checkpoint = torch.load("/Users/thebigmoney/Documents/University/Autumn 25/Deep Learning/Assignments/Assignment 3/checkpoint_11_128.pth", map_location=device)
+checkpoint = torch.load("model/checkpoint_11_128.pth", map_location=device)
+model.load_state_dict(checkpoint['model_state_dict'])
+model.eval()
 
-    count = sum([index_extended, middle_extended, ring_extended, pinky_extended])
-    
-    if count == 0:
+transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize([MODEL_IMG_SIZE, MODEL_IMG_SIZE], Image.BILINEAR),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=DATASET_MEANS, std=DATASET_STDS)
+])
+
+def detect_hand_gesture(keypoints: np.ndarray) -> str:
+
+    thumb  = keypoints[4,  1] < keypoints[2,  1]
+    index = keypoints[8,  1] < keypoints[6,  1]
+    middle = keypoints[12, 1] < keypoints[10, 1]
+    ring   = keypoints[16, 1] < keypoints[14, 1]
+    pinky  = keypoints[20, 1] < keypoints[18, 1]
+
+    cnt = sum([index, middle, ring, pinky])
+
+    #CALL ME
+    if thumb and pinky and not any([index, middle, ring]):
+        return "call-me"
+
+    #FIST
+    if cnt == 0 and not thumb:
         return "fist"
-    elif count == 1:
-        if index_extended and not middle_extended and not ring_extended and not pinky_extended:
-            return "peace"
-        else:
-            return "fist"
-    elif count == 2:
-        if index_extended and middle_extended and not ring_extended and not pinky_extended:
-            return "peace"
-        else:
-            return "fist"
-    elif count == 4:
+
+    #POINT
+    if index and not any([middle, ring, pinky]):
+        return "point"
+
+    #PEACE
+    if index and middle and not any([ring, pinky]):
+        return "peace"
+    
+    #THREE FINGERS
+    if index and middle and ring and not pinky:
+        return "three-fingers"
+
+    #PALM
+    if cnt == 4:
         return "palm"
-    else:
-        return "palm"
+
+    # fallback
+    return "fist"
 
 def detect_gestures():
     cap = cv2.VideoCapture(0)
@@ -44,42 +89,46 @@ def detect_gestures():
 
     left_gesture_prev = None
 
+    frame_idx = 0
+
     while True:
         ret, frame = cap.read()
-        if not ret:
+        if not ret: 
             continue
 
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        result = hands.process(rgb_frame)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = hand_detector.process(frame_rgb)
+        if not results.multi_hand_landmarks:
+            socketio.emit("gesture", {
+                "gesture": "no-hand",
+                "keypoints": []
+            })
+            socketio.sleep(0.2)
+            continue
 
-        if result.multi_hand_landmarks:
-            for hand_landmarks, handedness in zip(result.multi_hand_landmarks, result.multi_handedness):
-                hand_label = handedness.classification[0].label
+        transformed_frame = transform(frame_rgb)
+        transformed_frame = transformed_frame.unsqueeze(0)
+        transformed_frame.to(device)
 
-                if hand_label == "Right":
-                    # Use right hand for effect control.
-                    wrist = hand_landmarks.landmark[0]
-                    filter_val = int(np.interp(wrist.y, [0, 1], [2000, 200]))
-                    reverb_val = int(np.interp(wrist.x, [0, 1], [0, 127]))
-                    thumb_index_distance = np.abs(hand_landmarks.landmark[4].x - hand_landmarks.landmark[8].x)
-                    modulation = int(np.interp(thumb_index_distance, [0.0, 0.2], [0, 127]))
+        #Predict from Model:
+        with torch.no_grad():
+            pred_heatmaps = model(transformed_frame)
 
-                    socketio.emit("effect_data", {
-                        "filter_cutoff": filter_val,
-                        "reverb": reverb_val,
-                        "modulation": modulation
-                    })
+        hm_np = pred_heatmaps.squeeze(0).cpu().numpy()[None,...]  
+        norm_pts = heatmaps_to_coordinates(hm_np)[0] 
 
-                elif hand_label == "Left":
-                    # Use left hand for chord triggering.
-                    gesture = detect_left_hand_gesture(hand_landmarks)
-                    socketio.emit("gesture", {"gesture": gesture})
-                    # (Server no longer sends MIDI; client will handle MIDI output.)
-                    
-                    # Optionally, you could keep state here if needed.
-                    left_gesture_prev = gesture
-        # Adjust sleep time as needed
+        height, width, _ = frame.shape
+        keypoints_scaled = norm_pts * np.array([width, height])
+
+        gesture = detect_hand_gesture(keypoints_scaled)
+        print(f"Detected Gesture: {gesture}")
+        socketio.emit("gesture", {
+                "gesture": gesture,
+                "keypoints": norm_pts.tolist()
+            }
+        )
         socketio.sleep(0.2)
+    
     cap.release()
 
 @socketio.on("connect")
