@@ -124,11 +124,29 @@ HandSynth is an innovative music application that transforms hand gestures into 
 ## 🔧 Technical Details
 
 ### Model Training
-The hand keypoint detection model was trained on a custom dataset using:
-- **Architecture**: MobileNetV3-Large + U-Net
-- **Input**: 128x128 RGB images
-- **Output**: 21 heatmaps (one per keypoint)
-- **Training**: PyTorch with checkpoint saving
+
+#### Dataset & Preprocessing
+- **Dataset**: FreiHAND v2 public dataset (130,240 images)
+- **Split**: 70% training, 15% validation, 15% test
+- **Input Resolution**: 128x128 pixels (resized from 224x224)
+- **Normalization**: Custom dataset statistics
+  - Mean: [0.3950, 0.4323, 0.2954]
+  - Std: [0.1966, 0.1734, 0.1836]
+- **Heatmap Generation**: 32x32 Gaussian-blurred ground truth heatmaps
+
+#### Training Configuration
+- **Framework**: PyTorch with TensorBoard logging
+- **Batch Size**: 48
+- **Optimizer**: AdamW (lr=1e-3, weight_decay=1e-4)
+- **Loss Function**: MSE Loss on heatmap predictions
+- **Scheduler**: ReduceLROnPlateau (factor=0.5, patience=3)
+- **Early Stopping**: 5 epochs patience
+- **Final Model**: Checkpoint from epoch 11 (`checkpoint_11_128.pth`)
+
+#### Model Performance
+- **Average Keypoint Error**: 3.7% of image size
+- **Accuracy Threshold**: 5 pixels for 128x128 images
+- **Inference Speed**: ~10 FPS real-time processing
 
 ### Gesture Classification
 Hand gestures are classified using rule-based logic on detected keypoints:
